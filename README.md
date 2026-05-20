@@ -1,69 +1,141 @@
+# README.md
+
 # Book Scraper
 
-Scraper desenvolvido em Go para coletar dados do site:
+Scraper desenvolvido em Go para coletar dados estruturados do site:
 
-https://books.toscrape.com
+[https://books.toscrape.com](https://books.toscrape.com)
 
-O projeto executa scraping paginado, exporta dados estruturados em JSON e CSV, e roda em um pipeline completo GitLab CI/CD com testes, lint, build Docker e deploy simulado.
+O projeto realiza scraping paginado, exporta os dados em JSON e CSV, e executa um pipeline GitLab CI/CD com:
 
-## Arquitetura
+* testes automatizados
+* lint
+* build Docker
+* push para Container Registry
+* deploy simulado
 
-O projeto foi dividido em camadas:
+---
 
-- `cmd/`
-  - ponto de entrada da aplicação
+# Arquitetura
 
-- `internal/scraper`
-  - lógica de scraping
+```txt
+book-scraper/
+├── cmd/
+│   └── scraper/
+│       └── main.go
+├── internal/
+│   ├── exporter/
+│   ├── logger/
+│   ├── models/
+│   └── scraper/
+├── output/
+├── test/
+├── Dockerfile
+├── .gitlab-ci.yml
+├── .golangci.yml
+├── Makefile
+└── README.md
+```
 
-- `internal/models`
-  - estruturas de dados
+---
 
-- `internal/exporter`
-  - exportação JSON/CSV
+# Estrutura da Fonte de Dados
 
-- `internal/logger`
-  - logs centralizados
+O scraper utiliza como origem os elementos HTML abaixo:
 
-## Executando localmente (sem Docker)
+```html
+<article class="product_pod">
+  <div class="image_container">
+    <a href="...">
+      <img src="..." class="thumbnail" alt="...">
+    </a>
+  </div>
 
-### Pré-requisitos
+  <p class="star-rating Three"></p>
 
-- Go 1.23+
+  <h3>
+    <a href="..." title="...">
+      Título do Livro
+    </a>
+  </h3>
 
-### Instalação
+  <div class="product_price">
+    <p class="price_color">£12.99</p>
+
+    <p class="instock availability">
+      In stock
+    </p>
+  </div>
+</article>
+```
+
+Os dados são convertidos para uma estrutura tipada em Go:
+
+```json
+{
+  "title": "A Light in the Attic",
+  "price": "£51.77",
+  "availability": "In stock",
+  "rating": "Three",
+  "product_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+  "image_url": "https://books.toscrape.com/media/cache/..."
+}
+```
+
+---
+
+# Executando Localmente
+
+## Pré-requisitos
+
+* Go 1.23+
+* Docker Desktop
+* golangci-lint
+
+---
+
+## Rodando sem Docker
+
+Instale as dependências:
 
 ```bash
 go mod tidy
+```
 
+Execute o scraper:
+
+```bash
+go run ./cmd/scraper
+```
+
+Os arquivos serão gerados em:
+
+```txt
+output/books.json
+output/books.csv
+```
 
 ---
 
-# 4. Como rodar com Docker
+## Rodando com Docker
 
-```md id="prkl1y"
-## Executando com Docker
-
-### Build da imagem
+Build da imagem:
 
 ```bash
 docker build -t book-scraper .
+```
 
+Executar container:
+
+```bash
+docker run --rm book-scraper
+```
 
 ---
 
-# 5. Schema dos dados
+# Estrutura dos Dados
 
-Isso é MUITO importante.
-
----
-
-## JSON schema
-
-```md id="8ij7gj"
-## Estrutura dos dados
-
-### JSON
+## JSON
 
 ```json
 {
@@ -74,178 +146,202 @@ Isso é MUITO importante.
   "product_url": "string",
   "image_url": "string"
 }
+```
 
 ---
 
-## CSV schema
-
-```md id="ixxlo0"
-### CSV
+## CSV
 
 ```csv
 title,price,availability,rating,product_url,image_url
+```
 
 ---
 
-# 6. Pipeline explicado
+# Pipeline GitLab CI/CD
 
-Muito importante.
+O pipeline possui 4 stages.
 
 ---
 
-```md id="l2dr7w"
-## Pipeline GitLab CI/CD
-
-O pipeline possui 4 stages:
-
-### 1. Test
+## 1. Test
 
 Executa:
 
 ```bash
 go test ./...
+```
 
+Objetivo:
+
+* validar o funcionamento do scraper
+* impedir merge de código quebrado
 
 ---
 
-# 7. Decisões técnicas
+## 2. Lint
 
-ESSA PARTE É OURO EM ENTREVISTA.
+Executa:
+
+```bash
+golangci-lint run
+```
+
+Objetivo:
+
+* garantir qualidade de código
+* detectar erros comuns
+* aplicar boas práticas
 
 ---
 
-```md id="kjuz4j"
-## Decisões técnicas
+## 3. Build
 
-### Go como linguagem principal
+Executa:
+
+* build da imagem Docker
+* push para GitLab Container Registry
+
+Variáveis utilizadas:
+
+* `CI_REGISTRY`
+* `CI_REGISTRY_USER`
+* `CI_REGISTRY_PASSWORD`
+* `CI_REGISTRY_IMAGE`
+
+---
+
+## 4. Deploy
+
+Executado apenas na branch `main`.
+
+Atualmente o deploy é simulado utilizando `echo` para demonstrar o fluxo de publicação em AWS ECS.
+
+---
+
+# Decisões Técnicas
+
+## Go
 
 Go foi escolhido por:
-- excelente concorrência
-- baixo consumo
-- binário único
-- ótima integração com Docker
-- simplicidade para pipelines CI/CD
+
+* simplicidade
+* binário único
+* ótima integração com Docker
+* baixo consumo de memória
+* facilidade para CI/CD
 
 ---
 
-### Uso do GoQuery
+## GoQuery
 
-GoQuery oferece:
-- parsing HTML eficiente
-- API semelhante ao jQuery
-- boa legibilidade
+GoQuery foi utilizado para parsing HTML por oferecer:
 
----
-
-### Exportação em JSON e CSV
-
-JSON:
-- integração com APIs
-- flexibilidade
-
-CSV:
-- análise em planilhas
-- interoperabilidade
+* seletores CSS simples
+* boa legibilidade
+* excelente integração com HTML estático
 
 ---
 
-### Estrutura modular
+## Estrutura Modular
 
-A divisão em:
-- scraper
-- exporter
-- models
-- logger
+O projeto foi separado em:
 
-foi feita para:
-- facilitar testes
-- reduzir acoplamento
-- melhorar manutenção
+* scraper
+* exporter
+* logger
+* models
 
----
+Essa divisão facilita:
 
-### Multi-stage Docker build
-
-Utilizado para:
-- reduzir tamanho da imagem
-- separar build/runtime
-- aumentar segurança
-## Melhorias futuras
-
-Com mais tempo eu implementaria:
-
-### Anti-bot handling
-
-- rotação de User-Agent
-- proxies
-- retry exponencial
-- rate limiting
+* manutenção
+* testes
+* reutilização
+* desacoplamento
 
 ---
 
-### Observabilidade
+## Multi-stage Docker Build
 
-- Prometheus
-- métricas
-- tracing
-- healthchecks
-- structured logging
+O Dockerfile utiliza multi-stage build para:
 
----
-
-### Persistência
-
-- PostgreSQL
-- SQLite
-- versionamento de scraping
+* reduzir tamanho da imagem
+* separar build/runtime
+* aumentar segurança
 
 ---
 
-### Concorrência
+# Melhorias Futuras
 
-Uso de goroutines para scraping paralelo.
+Com mais tempo seria possível implementar:
 
----
-
-### IA
-
-Uso de LLMs para:
-- classificação automática
-- enriquecimento semântico
-- detecção de páginas quebradas
-- parsing resiliente
-
-## Uso de IA durante o desafio
-
-A IA foi utilizada como ferramenta de apoio técnico para:
-
-- revisão arquitetural
-- sugestões de estrutura de projeto
-- melhoria do Dockerfile
-- validação de boas práticas Go
-- refinamento do pipeline CI/CD
+* concorrência com goroutines
+* retry exponencial
+* rotação de User-Agent
+* rate limiting
+* proxies
+* persistência em PostgreSQL
+* observabilidade com Prometheus
+* tracing
+* healthchecks
+* scraping resiliente
+* dashboards
 
 ---
 
-### Exemplos de uso
+# Uso de IA Durante o Desafio
 
-- geração inicial da estrutura modular
-- identificação de melhorias de segurança
-- ajustes de lint
-- revisão de tratamento de erros
+A IA foi utilizada como ferramenta de apoio para:
 
----
+* revisão arquitetural
+* melhoria do Dockerfile
+* refinamento do pipeline CI/CD
+* validação de boas práticas Go
+* ajustes de lint
+* documentação técnica
 
-### O que funcionou bem
-
-- aceleração da documentação
-- revisão de código
-- melhoria de padrões de projeto
+A validação final das decisões e correções foi realizada manualmente.
 
 ---
 
-### O que precisou de validação manual
+# Dockerfile
 
-- compatibilidade de versões
-- ajustes do golangci-lint
-- detalhes específicos do ambiente Windows/Docker
+```dockerfile
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o scraper ./cmd/scraper
+
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+COPY --from=builder /app/scraper .
+
+RUN mkdir -p output
+
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
+EXPOSE 8080
+
+CMD ["./scraper"]
+```
+
+O container utiliza:
+
+* multi-stage build
+* usuário não-root
+* imagem Alpine minimalista
+* separação entre build e runtime
