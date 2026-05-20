@@ -88,7 +88,7 @@ Os dados são convertidos para uma estrutura tipada em Go:
 
 ## Pré-requisitos
 
-* Go 1.23+
+* Go 1.25
 * Docker Desktop
 * golangci-lint
 
